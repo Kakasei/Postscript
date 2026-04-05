@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import { createContentLoader } from "vitepress";
 
 const AUTO_SUMMARY_LENGTH = 120;
-const POSTS_GLOB = "posts/*.md";
+const POSTS_GLOB = "posts/*/*.md";
 const PROJECT_ROOT = resolve(
   fileURLToPath(new URL(".", import.meta.url)),
   "..",
