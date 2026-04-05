@@ -5,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   base: "/Postscript/",
+  srcExclude: ["mikansei/**"],
   title: "Postscript",
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config

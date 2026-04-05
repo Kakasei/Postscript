@@ -5,12 +5,50 @@ import { fileURLToPath } from "url";
 import { createContentLoader } from "vitepress";
 
 const AUTO_SUMMARY_LENGTH = 120;
+const POSTS_GLOB = "posts/*.md";
 const PROJECT_ROOT = resolve(
   fileURLToPath(new URL(".", import.meta.url)),
   "..",
 );
 
+type Frontmatter = Record<string, unknown>;
+
+type GitTimes = {
+  first: number;
+  last: number;
+};
+
+type FileSystemTimes = {
+  created: number;
+  updated: number;
+};
+
+export type ArchivePost = {
+  title: string;
+  url: string;
+  publishedAt: string;
+  publishedTimestamp: number;
+  updatedAt: string;
+  updatedTimestamp: number;
+  tags: string[];
+  summary: string;
+  wordCount: number;
+  isPinned: boolean;
+  pinOrder: number;
+};
+
+// 将 frontmatter 中可能出现的时间值统一转换为时间戳。
+// 无效或缺失时返回 0，便于后续使用 || 进行回退。
 function toTimestamp(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.floor(value);
+  }
+
+  if (value instanceof Date) {
+    const timestamp = value.getTime();
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+  }
+
   if (typeof value !== "string" || value.trim() === "") {
     return 0;
   }
@@ -19,6 +57,7 @@ function toTimestamp(value: unknown): number {
   return Number.isNaN(timestamp) ? 0 : timestamp;
 }
 
+// 统一归档页日期展示格式：YYYY-MM-DD
 function formatDate(timestamp: number): string {
   if (!timestamp) {
     return "Unknown";
@@ -31,6 +70,7 @@ function formatDate(timestamp: number): string {
   return `${year}-${month}-${day}`;
 }
 
+// 将 markdown 清洗为纯文本，用于自动摘要和字数统计。
 function stripMarkdown(markdown: string): string {
   return markdown
     .replace(/^---[\s\S]*?---\s*/m, " ")
@@ -48,6 +88,17 @@ function stripMarkdown(markdown: string): string {
     .trim();
 }
 
+// 将 HTML 摘录转换为纯文本。
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// 中英文混排的简易字数统计：
+// - 中文按字计数
+// - 英文按单词计数
 function getWordCount(text: string): number {
   if (!text) {
     return 0;
@@ -62,7 +113,9 @@ function getWordCount(text: string): number {
   return cjkCount + latinWordCount;
 }
 
-function normalizeTags(frontmatter: Record<string, unknown>): string[] {
+// 兼容 tags 的两种写法：数组 / 逗号分隔字符串。
+// 若无 tags，则回退旧字段 category。
+function normalizeTags(frontmatter: Frontmatter): string[] {
   const rawTags = frontmatter.tags;
   let tags: string[] = [];
 
@@ -85,7 +138,10 @@ function normalizeTags(frontmatter: Record<string, unknown>): string[] {
   return tags;
 }
 
-function normalizePin(frontmatter: Record<string, unknown>): {
+// 置顶字段支持：
+// - pin: 数字（>0，数值越大优先级越高）
+// - pin: true（默认优先级 1）
+function normalizePin(frontmatter: Frontmatter): {
   isPinned: boolean;
   pinOrder: number;
 } {
@@ -102,16 +158,93 @@ function normalizePin(frontmatter: Record<string, unknown>): {
   return { isPinned: false, pinOrder: 0 };
 }
 
+// 标题优先使用 frontmatter.title，不存在时退化为文件名。
+function resolveTitle(frontmatter: Frontmatter, url: string): string {
+  if (typeof frontmatter.title === "string" && frontmatter.title.trim()) {
+    return frontmatter.title.trim();
+  }
+
+  return url.split("/").pop()?.replace(".html", "") ?? "Untitled";
+}
+
+// 摘要优先级：
+// 1) frontmatter.summary（手写摘要）
+// 2) page.excerpt（通过 createContentLoader 的 excerpt 提取）
+// 3) 自动截取正文前 N 个字符
+function resolveSummary(
+  frontmatter: Frontmatter,
+  sourceText: string,
+  excerpt?: string,
+): string {
+  const manualSummary =
+    typeof frontmatter.summary === "string" ? frontmatter.summary.trim() : "";
+
+  if (manualSummary) {
+    return manualSummary;
+  }
+
+  const excerptSummary = excerpt ? stripMarkdown(stripHtml(excerpt)) : "";
+
+  if (excerptSummary) {
+    return excerptSummary;
+  }
+
+  const autoSummary = sourceText.slice(0, AUTO_SUMMARY_LENGTH);
+  if (!autoSummary) {
+    return "";
+  }
+
+  return autoSummary.length < sourceText.length
+    ? `${autoSummary}...`
+    : autoSummary;
+}
+
+/** 
+ * 
+发布时间优先级：
+frontmatter -> git 首次提交时间 -> 文件创建时间 -> 文件修改时间
+*/
+function resolvePublishedTimestamp(
+  frontmatter: Frontmatter,
+  gitTimes: GitTimes,
+  fsTimes: FileSystemTimes,
+): number {
+  return (
+    toTimestamp(frontmatter.publishedAt ?? frontmatter.date) ||
+    gitTimes.first ||
+    fsTimes.created ||
+    fsTimes.updated
+  );
+}
+
+// 更新时间优先级：
+// frontmatter -> 文件修改时间 -> git 最后提交时间 -> 发布时间
+function resolveUpdatedTimestamp(
+  frontmatter: Frontmatter,
+  gitTimes: GitTimes,
+  fsTimes: FileSystemTimes,
+  publishedTimestamp: number,
+): number {
+  return (
+    toTimestamp(frontmatter.updatedAt ?? frontmatter.lastModified) ||
+    fsTimes.updated ||
+    gitTimes.last ||
+    publishedTimestamp
+  );
+}
+
+// 根据页面 URL 反推出 markdown 源文件路径。
 function postFilePathFromUrl(url: string): string {
   const decodedUrl = decodeURIComponent(url);
   const slug = decodedUrl.replace(/^\/posts\//, "").replace(/\.html$/, "");
   return resolve(PROJECT_ROOT, "posts", `${slug}.md`);
 }
 
-function getGitFirstAndLastCommitTime(filePath: string): {
-  first: number;
-  last: number;
-} {
+// 读取单篇文章的 git 历史：
+// - first: 最早一次提交时间
+// - last: 最新一次提交时间
+// 若 git 不可用或无历史，返回 0。
+function getGitFirstAndLastCommitTime(filePath: string): GitTimes {
   const result = spawnSync(
     "git",
     ["log", "--follow", "--format=%aI", "--", filePath],
@@ -121,7 +254,7 @@ function getGitFirstAndLastCommitTime(filePath: string): {
     },
   );
 
-  if (result.status !== 0 || !result.stdout) {
+  if (result.error || result.status !== 0 || !result.stdout) {
     return { first: 0, last: 0 };
   }
 
@@ -143,10 +276,8 @@ function getGitFirstAndLastCommitTime(filePath: string): {
   };
 }
 
-function getFileSystemTimes(filePath: string): {
-  created: number;
-  updated: number;
-} {
+// 读取文件系统时间，作为 git/frontmatter 缺失时的兜底。
+function getFileSystemTimes(filePath: string): FileSystemTimes {
   if (!existsSync(filePath)) {
     return { created: 0, updated: 0 };
   }
@@ -163,67 +294,58 @@ function getFileSystemTimes(filePath: string): {
   };
 }
 
-export default createContentLoader("posts/*.md", {
+export default createContentLoader<ArchivePost[]>(POSTS_GLOB, {
+  // 需要 src 用于自动摘要和字数统计。
   includeSrc: true,
-  excerpt: true,
+  // 支持在文章正文中通过 `<!-- more -->` 手动截断摘要。
+  excerpt: "<!-- more -->",
   transform(rawData) {
-    return rawData
-      .map((page) => {
-        const frontmatter = page.frontmatter as Record<string, unknown>;
-        const sourceText = stripMarkdown(page.src ?? "");
-        const postFilePath = postFilePathFromUrl(page.url);
+    return (
+      rawData
+        .map((page) => {
+          const frontmatter = page.frontmatter as Frontmatter;
+          const sourceText = stripMarkdown(page.src ?? "");
+          const postFilePath = postFilePathFromUrl(page.url);
 
-        const gitTimes = getGitFirstAndLastCommitTime(postFilePath);
-        const fsTimes = getFileSystemTimes(postFilePath);
+          const gitTimes = getGitFirstAndLastCommitTime(postFilePath);
+          const fsTimes = getFileSystemTimes(postFilePath);
 
-        const publishedTimestamp =
-          toTimestamp(frontmatter.publishedAt ?? frontmatter.date) ||
-          gitTimes.first ||
-          fsTimes.created ||
-          fsTimes.updated;
+          const publishedTimestamp = resolvePublishedTimestamp(
+            frontmatter,
+            gitTimes,
+            fsTimes,
+          );
 
-        const updatedTimestamp =
-          toTimestamp(frontmatter.updatedAt ?? frontmatter.lastModified) ||
-          fsTimes.updated ||
-          gitTimes.last ||
-          publishedTimestamp;
+          const updatedTimestamp = resolveUpdatedTimestamp(
+            frontmatter,
+            gitTimes,
+            fsTimes,
+            publishedTimestamp,
+          );
 
-        const manualSummary =
-          typeof frontmatter.summary === "string"
-            ? frontmatter.summary.trim()
-            : "";
+          const { isPinned, pinOrder } = normalizePin(frontmatter);
 
-        const autoSummary = sourceText.slice(0, AUTO_SUMMARY_LENGTH);
-        const summary =
-          manualSummary ||
-          (autoSummary.length < sourceText.length
-            ? `${autoSummary}...`
-            : autoSummary);
-
-        const { isPinned, pinOrder } = normalizePin(frontmatter);
-
-        return {
-          title:
-            typeof frontmatter.title === "string" && frontmatter.title.trim()
-              ? frontmatter.title.trim()
-              : (page.url.split("/").pop()?.replace(".html", "") ?? "Untitled"),
-          url: page.url,
-          publishedAt: formatDate(publishedTimestamp),
-          publishedTimestamp,
-          updatedAt: formatDate(updatedTimestamp),
-          updatedTimestamp,
-          tags: normalizeTags(frontmatter),
-          summary,
-          wordCount: getWordCount(sourceText),
-          isPinned,
-          pinOrder,
-        };
-      })
-      .sort((a, b) => {
-        if (a.pinOrder !== b.pinOrder) {
-          return b.pinOrder - a.pinOrder;
-        }
-        return b.publishedTimestamp - a.publishedTimestamp;
-      });
+          return {
+            title: resolveTitle(frontmatter, page.url),
+            url: page.url,
+            publishedAt: formatDate(publishedTimestamp),
+            publishedTimestamp,
+            updatedAt: formatDate(updatedTimestamp),
+            updatedTimestamp,
+            tags: normalizeTags(frontmatter),
+            summary: resolveSummary(frontmatter, sourceText, page.excerpt),
+            wordCount: getWordCount(sourceText),
+            isPinned,
+            pinOrder,
+          };
+        })
+        // 先按置顶优先级排序，再按发布时间倒序。
+        .sort((a, b) => {
+          if (a.pinOrder !== b.pinOrder) {
+            return b.pinOrder - a.pinOrder;
+          }
+          return b.publishedTimestamp - a.publishedTimestamp;
+        })
+    );
   },
 });
