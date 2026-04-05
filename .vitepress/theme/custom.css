@@ -1,0 +1,26 @@
+/* 
+    更改默认主题中doc布局的页面宽度
+ */
+@media (min-width: 960px) {
+  .VPDoc:not(.has-sidebar) .container {
+    max-width: min(80rem, calc(100vw - 64px)) !important;
+  }
+
+  .VPDoc:not(.has-sidebar) .content {
+    max-width: 72rem !important;
+  }
+
+  .VPDoc.has-aside .content-container {
+    max-width: 64rem !important;
+  }
+}
+
+@media (min-width: 1920px) {
+  .VPDoc:not(.has-sidebar) .content {
+    max-width: 76rem !important;
+  }
+
+  .VPDoc.has-aside .content-container {
+    max-width: 68rem !important;
+  }
+}

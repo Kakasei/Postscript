@@ -1,7 +1,13 @@
 ---
-title: qbittorrent enhanced edition（便携版）屏蔽吸血客户端
-date: 2026-04-05
-category: Tutorial
+title: "qbittorrent enhanced edition（便携版）屏蔽吸血客户端"
+publishedAt: "2026-04-05T19:30:00+08:00"
+updatedAt: "2026-04-05T22:10:00+08:00"
+tags:
+  - BT
+  - "qBittorrent"
+  - 排障
+summary: "记录在 qBittorrent Enhanced Edition 中按 Peer ID 屏蔽吸血客户端时踩过的坑与最终可行方案。"
+pin: 1
 layout: doc
 ---
 

@@ -1,5 +1,6 @@
 ---
-layout: page
+layout: doc
+aside: false
 ---
 
 <script setup>

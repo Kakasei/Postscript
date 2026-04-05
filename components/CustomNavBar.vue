@@ -5,6 +5,7 @@
       <a :href="withBase('/')" class="text-2xl font-bold">Postscript</a>
       <nav class="flex">
         <a :href="withBase('/')" class="px-4">首页</a>
+        <a :href="withBase('/archive')" class="px-4">归档</a>
         <a :href="withBase('/about')" class="px-4">关于作者</a>
       </nav>
     </div>

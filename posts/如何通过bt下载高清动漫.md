@@ -1,7 +1,13 @@
 ---
 title: 如何通过BT下载高清动漫
-date: 2026-03-15
-category: Tutorial
+publishedAt: "2026-03-15T20:00:00+08:00"
+updatedAt: "2026-03-15T20:00:00+08:00"
+tags:
+  - BT
+  - 动漫
+  - 教程
+summary: "介绍通过 BT 获取高清动漫资源的思路与注意事项，帮助你绕开低质量来源并直接获取压制组发布的内容。"
+pin: false
 layout: doc
 ---
 # 前言
