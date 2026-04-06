@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import { createContentLoader } from "vitepress";
 
 const AUTO_SUMMARY_LENGTH = 120;
-const POSTS_GLOB = "posts/*/*.md";
+const POSTS_GLOB = "posts/**/*.md";
 const PROJECT_ROOT = resolve(
   fileURLToPath(new URL(".", import.meta.url)),
   "..",
@@ -36,6 +36,10 @@ export type ArchivePost = {
   isPinned: boolean;
   pinOrder: number;
 };
+
+// 为 `import { data } from "./archive.data.ts"` 提供类型信息（仅类型声明，不会产生运行时代码）。
+declare const data: ArchivePost[];
+export { data };
 
 // 将 frontmatter 中可能出现的时间值统一转换为时间戳。
 // 无效或缺失时返回 0，便于后续使用 || 进行回退。
@@ -114,7 +118,6 @@ function getWordCount(text: string): number {
 }
 
 // 兼容 tags 的两种写法：数组 / 逗号分隔字符串。
-// 若无 tags，则回退旧字段 category。
 function normalizeTags(frontmatter: Frontmatter): string[] {
   const rawTags = frontmatter.tags;
   let tags: string[] = [];
@@ -127,14 +130,7 @@ function normalizeTags(frontmatter: Frontmatter): string[] {
       .map((tag) => tag.trim())
       .filter(Boolean);
   }
-
-  if (tags.length === 0 && typeof frontmatter.category === "string") {
-    const category = frontmatter.category.trim();
-    if (category) {
-      tags = [category];
-    }
-  }
-
+  
   return tags;
 }
 

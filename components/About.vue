@@ -1,30 +1,35 @@
 <template>
   <div>
-    <h1>关于我</h1>
-    <p>阿橙，热爱这个世界</p>
-    <p>目标是成为前端开发工程师，欢迎查看我的简历：</p>
-    <a
-      href="/resume.pdf"
-      download="胡佳成-简历.pdf"
-      target="_blank"
-      class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)] text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 hover:text-gray-900 transition-colors cursor-pointer !no-underline"
-    >
-      <svg
-        class="w-4 h-4 mr-2"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-        ></path>
-      </svg>
-      下载 PDF 简历
-    </a>
+    <div class="flex justify-between">
+      <div>
+        <h1>关于我</h1>
+        <p>阿橙，热爱这个世界</p>
+        <p>目标是成为前端开发工程师，欢迎查看我的简历：</p>
+        <a
+          href="/resume.pdf"
+          download="胡佳成-简历.pdf"
+          target="_blank"
+          class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)] text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 hover:text-gray-900 transition-colors cursor-pointer !no-underline"
+        >
+          <svg
+            class="w-4 h-4 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+            ></path>
+          </svg>
+          下载 PDF 简历
+        </a>
+      </div>
+      <img src="/avatar.png" alt="avatar" height="100" width="100" class=""/>
+    </div>
 
     <h2 class="text-2xl font-bold text-gray-900 mt-16 mb-6">
       可以在这些地方找到我，来和我玩

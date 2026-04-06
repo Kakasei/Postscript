@@ -1,7 +1,5 @@
 ---
 title: "qbittorrent enhanced edition（便携版）屏蔽吸血客户端"
-publishedAt: "2026-04-05T19:30:00+08:00"
-updatedAt: "2026-04-05T22:10:00+08:00"
 tags:
   - BT
   - "qBittorrent"
